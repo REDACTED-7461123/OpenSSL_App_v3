@@ -377,7 +377,7 @@ namespace OpenSSLGui
                 AppendOutput($"Hash B: {hashB}");
                 AppendOutput($"Result: {(equal ? "MATCH" : "DIFFERENT")} | {timeInfo}");
 
-                CompareResultText.Text = equal ? "✅ Files match by hash" : "❌ Files differ (hash mismatch)";
+                CompareResultText.Text = equal ? "Files match by hash" : "Files differ (hash mismatch)";
                 StatusText.Text = "Ready";
 
                 logger.Append(new LogEntry
