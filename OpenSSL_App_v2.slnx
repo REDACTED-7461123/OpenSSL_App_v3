@@ -1,3 +1,6 @@
 <Solution>
   <Project Path="OpenSSL_App_v2.csproj" />
+  <Project Path="OpenSSLGui.PluginAbstractions.csproj" />
+  <Project Path="Plugins/RockYouPasswordPolicyPlugin/RockYouPasswordPolicyPlugin.csproj" />
+  <Project Path="Plugins/SolarizedThemePlugin/SolarizedThemePlugin.csproj" />
 </Solution>

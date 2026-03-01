@@ -1,7 +1,11 @@
 ﻿using Microsoft.Win32;
+using OpenSSLGui.PluginAbstractions;
+using OpenSSLGui.PluginHost;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -12,6 +16,10 @@ namespace OpenSSLGui
     {
         private readonly string openssl = "openssl.exe";
         private readonly OperationLogger logger;
+        private readonly PluginManager pluginManager;
+        private readonly List<string> availableThemes = new() { "Light", "Dark" };
+        private readonly Dictionary<string, ResourceDictionary> runtimeThemeDictionaries = new(StringComparer.OrdinalIgnoreCase);
+        private int currentThemeIndex;
 
         public MainWindow()
         {
@@ -22,7 +30,48 @@ namespace OpenSSLGui
             logger.Load();
             HistoryGrid.ItemsSource = logger.Items;
 
+            pluginManager = new PluginManager();
+            LoadPlugins();
+
             UpdatePasswordStrength();
+        }
+
+        private void LoadPlugins()
+        {
+            pluginManager.LoadPlugins(AppendOutput, SetStatusSafe);
+
+            foreach (var theme in pluginManager.ThemePlugins.Values)
+            {
+                try
+                {
+                    runtimeThemeDictionaries[theme.ThemeKey] = theme.BuildTheme();
+
+                    if (!availableThemes.Contains(theme.ThemeKey, StringComparer.OrdinalIgnoreCase))
+                    {
+                        availableThemes.Add(theme.ThemeKey);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AppendOutput($"[Plugin Theme] {theme.Name} failed: {ex.Message}");
+                }
+            }
+
+            foreach (var msg in pluginManager.LoadMessages)
+            {
+                AppendOutput($"[Plugin] {msg}");
+            }
+        }
+
+        private void SetStatusSafe(string text)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.Invoke(() => StatusText.Text = text);
+                return;
+            }
+
+            StatusText.Text = text;
         }
 
         // ---------- Mode switch ----------
@@ -89,6 +138,21 @@ namespace OpenSSLGui
         private void UpdatePasswordStrength()
         {
             var (score, label) = PasswordStrength.Evaluate(PasswordBox.Password);
+
+            foreach (var plugin in pluginManager.PasswordPolicyPlugins)
+            {
+                try
+                {
+                    var result = plugin.Evaluate(PasswordBox.Password);
+                    score += result.ScoreAdjustment;
+                }
+                catch (Exception ex)
+                {
+                    AppendOutput($"[Plugin Password] {plugin.Name} failed: {ex.Message}");
+                }
+            }
+
+            score = Math.Clamp(score, 0, 4);
             PwdStrengthBar.Value = score;
             PwdStrengthText.Text = label;
         }
@@ -108,6 +172,23 @@ namespace OpenSSLGui
                 MessageBox.Show($"Password too weak: {label}\nEither strengthen the password or enable 'Allow weak password'.",
                     "Weak password", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
+            }
+
+            foreach (var plugin in pluginManager.PasswordPolicyPlugins)
+            {
+                try
+                {
+                    PasswordPolicyResult result = plugin.Evaluate(pwd);
+                    if (!result.IsAllowed)
+                    {
+                        MessageBox.Show($"{plugin.Name}: {result.Message}", "Password rejected by plugin", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return false;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AppendOutput($"[Plugin Password] {plugin.Name} runtime error: {ex.Message}");
+                }
             }
 
             return true;
@@ -478,11 +559,16 @@ namespace OpenSSLGui
 
         // ---------- Theme toggle ----------
 
-        private bool _isDarkTheme = false;
-
         private void ToggleTheme_Click(object sender, RoutedEventArgs e)
         {
-            _isDarkTheme = !_isDarkTheme;
+            if (availableThemes.Count == 0)
+            {
+                AppendOutput("[Theme] No themes available.");
+                return;
+            }
+
+            currentThemeIndex = (currentThemeIndex + 1) % availableThemes.Count;
+            string selectedTheme = availableThemes[currentThemeIndex];
 
             var app = Application.Current;
             if (app == null) return;
@@ -491,13 +577,27 @@ namespace OpenSSLGui
             var dicts = app.Resources.MergedDictionaries;
             dicts.Clear();
 
-            dicts.Add(new ResourceDictionary
+            if (selectedTheme.Equals("Dark", StringComparison.OrdinalIgnoreCase) ||
+                selectedTheme.Equals("Light", StringComparison.OrdinalIgnoreCase))
             {
-                Source = new Uri(_isDarkTheme ? "/Dark.xaml" : "/Light.xaml", UriKind.Relative)
-            });
+                dicts.Add(new ResourceDictionary
+                {
+                    Source = new Uri(selectedTheme.Equals("Dark", StringComparison.OrdinalIgnoreCase) ? "/Dark.xaml" : "/Light.xaml", UriKind.Relative)
+                });
+            }
+            else if (runtimeThemeDictionaries.TryGetValue(selectedTheme, out var pluginTheme))
+            {
+                dicts.Add(new ResourceDictionary { Source = new Uri("/Light.xaml", UriKind.Relative) });
+                dicts.Add(pluginTheme);
+            }
+            else
+            {
+                dicts.Add(new ResourceDictionary { Source = new Uri("/Light.xaml", UriKind.Relative) });
+                selectedTheme = "Light";
+            }
 
-            StatusText.Text = _isDarkTheme ? "Theme: Dark" : "Theme: Light";
-            AppendOutput($"[Theme] {(_isDarkTheme ? "Dark" : "Light")}");
+            StatusText.Text = $"Theme: {selectedTheme}";
+            AppendOutput($"[Theme] {selectedTheme}");
         }
     }
 }

@@ -1,7 +1,5 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -9,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="OpenSSLGui.PluginAbstractions.csproj" />
+    <ProjectReference Include="..\..\OpenSSLGui.PluginAbstractions.csproj" />
   </ItemGroup>
-
 </Project>
