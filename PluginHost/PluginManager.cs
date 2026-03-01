@@ -91,17 +91,24 @@ public sealed class PluginManager
         }
     }
 
-    private sealed class WpfPluginContext(
-        string pluginDirectory,
-        string dataDirectory,
-        Action<string> log,
-        Action<string> setStatus) : IPluginContext
+    private sealed class WpfPluginContext : IPluginContext
     {
-        public string PluginDirectory { get; } = pluginDirectory;
-        public string DataDirectory { get; } = dataDirectory;
+        private readonly Action<string> _log;
+        private readonly Action<string> _setStatus;
 
-        public void Log(string message) => log(message);
+        public WpfPluginContext(string pluginDirectory, string dataDirectory, Action<string> log, Action<string> setStatus)
+        {
+            PluginDirectory = pluginDirectory;
+            DataDirectory = dataDirectory;
+            _log = log;
+            _setStatus = setStatus;
+        }
 
-        public void SetStatus(string message) => setStatus(message);
+        public string PluginDirectory { get; }
+        public string DataDirectory { get; }
+
+        public void Log(string message) => _log(message);
+
+        public void SetStatus(string message) => _setStatus(message);
     }
 }
