@@ -109,15 +109,20 @@ namespace OpenSSLGui
             OutputBox.ScrollToEnd();
         }
 
-        private async Task<(int exitCode, string output)> RunOpenSSLAsync(string args)
+        private async Task<(int exitCode, string output)> RunOpenSSLAsync(params string[] arguments)
         {
-            var psi = new ProcessStartInfo(openssl, args)
+            var psi = new ProcessStartInfo(openssl)
             {
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+
+            foreach (var arg in arguments)
+            {
+                psi.ArgumentList.Add(arg);
+            }
 
             using var p = new Process { StartInfo = psi };
             p.Start();
@@ -267,12 +272,15 @@ namespace OpenSSLGui
                 string outFile = file + ".enc";
                 string pwd = PasswordBox.Password;
 
-                string args = $"{algo} {(salt ? "-salt " : "")}-in \"{file}\" -out \"{outFile}\" -k \"{pwd}\"";
-
                 StatusText.Text = "Encrypting...";
                 AppendOutput($"[Encrypt] {algo} -> {outFile}");
 
-                var (code, output) = await RunOpenSSLAsync(args);
+                var opensslArgs = new List<string> { algo };
+                if (salt)
+                    opensslArgs.Add("-salt");
+
+                opensslArgs.AddRange(new[] { "-in", file, "-out", outFile, "-k", pwd });
+                var (code, output) = await RunOpenSSLAsync(opensslArgs.ToArray());
 
                 string status = code == 0 ? "OK" : "ERROR";
                 AppendOutput(output.Length == 0 ? $"ExitCode={code}" : output);
@@ -312,12 +320,10 @@ namespace OpenSSLGui
                 string outFile = file + ".dec";
                 string pwd = PasswordBox.Password;
 
-                string args = $"{algo} -d -in \"{file}\" -out \"{outFile}\" -k \"{pwd}\"";
-
                 StatusText.Text = "Decrypting...";
                 AppendOutput($"[Decrypt] {algo} -> {outFile}");
 
-                var (code, output) = await RunOpenSSLAsync(args);
+                var (code, output) = await RunOpenSSLAsync(algo, "-d", "-in", file, "-out", outFile, "-k", pwd);
 
                 string status = code == 0 ? "OK" : "ERROR";
                 AppendOutput(output.Length == 0 ? $"ExitCode={code}" : output);
@@ -353,13 +359,12 @@ namespace OpenSSLGui
                 }
 
                 string h = GetSelectedComboText(HashAlgoBox);
-                string args = $"dgst -{h} \"{file}\"";
 
                 StatusText.Text = "Hashing...";
                 AppendOutput($"[Hash] {h} -> {file}");
 
                 var sw = Stopwatch.StartNew();
-                var (code, output) = await RunOpenSSLAsync(args);
+                var (code, output) = await RunOpenSSLAsync("dgst", $"-{h}", file);
                 sw.Stop();
 
                 string timeInfo = $"Time: {sw.ElapsedMilliseconds} ms";
@@ -421,9 +426,6 @@ namespace OpenSSLGui
 
                 string h = GetSelectedComboText(HashAlgoBox);
 
-                string argsA = $"dgst -{h} \"{fileA}\"";
-                string argsB = $"dgst -{h} \"{fileB}\"";
-
                 StatusText.Text = "Comparing hashes...";
                 AppendOutput($"[HashCompare] {h}");
                 AppendOutput($"A: {fileA}");
@@ -431,8 +433,8 @@ namespace OpenSSLGui
 
                 var sw = System.Diagnostics.Stopwatch.StartNew();
 
-                var (codeA, outA) = await RunOpenSSLAsync(argsA);
-                var (codeB, outB) = await RunOpenSSLAsync(argsB);
+                var (codeA, outA) = await RunOpenSSLAsync("dgst", $"-{h}", fileA);
+                var (codeB, outB) = await RunOpenSSLAsync("dgst", $"-{h}", fileB);
 
                 sw.Stop();
 
@@ -505,12 +507,10 @@ namespace OpenSSLGui
                     return;
                 }
 
-                string args = $"genrsa -out \"{outFile}\" {bits}";
-
                 StatusText.Text = "Generating key...";
                 AppendOutput($"[KeyGen] RSA {bits} -> {outFile}");
 
-                var (code, output) = await RunOpenSSLAsync(args);
+                var (code, output) = await RunOpenSSLAsync("genrsa", "-out", outFile, bits);
                 string status = code == 0 ? "OK" : "ERROR";
 
                 AppendOutput(output.Length == 0 ? $"ExitCode={code}" : output);
