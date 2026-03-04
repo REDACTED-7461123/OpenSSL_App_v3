@@ -35,6 +35,7 @@ namespace OpenSSLGui
             PanelHash.Visibility = i == 1 ? Visibility.Visible : Visibility.Collapsed;
             PanelKeys.Visibility = i == 2 ? Visibility.Visible : Visibility.Collapsed;
             PanelHistory.Visibility = i == 3 ? Visibility.Visible : Visibility.Collapsed;
+            PanelSettings.Visibility = Visibility.Collapsed;
 
             StatusText.Text = i switch
             {
@@ -45,6 +46,19 @@ namespace OpenSSLGui
                 _ => "Ready"
             };
         }
+
+        private void Settings_Tab(object sender, RoutedEventArgs e)
+        {
+            // Hide all mode panels and show the settings panel
+            PanelEncrypt.Visibility = Visibility.Collapsed;
+            PanelHash.Visibility = Visibility.Collapsed;
+            PanelKeys.Visibility = Visibility.Collapsed;
+            PanelHistory.Visibility = Visibility.Collapsed;
+            PanelSettings.Visibility = Visibility.Visible;
+
+            StatusText.Text = "Settings";
+        } 
+
 
         // ---------- Helpers ----------
         private string GetSelectedComboText(ComboBox box)
@@ -60,16 +74,20 @@ namespace OpenSSLGui
             OutputBox.ScrollToEnd();
         }
 
-        private async Task<(int exitCode, string output)> RunOpenSSLAsync(string args)
+        private async Task<(int exitCode, string output)> RunOpenSSLAsync(params string[] args)
         {
-            var psi = new ProcessStartInfo(openssl, args)
+            var psi = new ProcessStartInfo
             {
+                FileName = "openssl.exe",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
-
+            foreach (string argument in args)
+            {
+                psi.ArgumentList.Add(argument);
+            }
             using var p = new Process { StartInfo = psi };
             p.Start();
 
@@ -185,13 +203,20 @@ namespace OpenSSLGui
 
                 string outFile = file + ".enc";
                 string pwd = PasswordBox.Password;
-
-                string args = $"{algo} {(salt ? "-salt " : "")}-in \"{file}\" -out \"{outFile}\" -k \"{pwd}\"";
-
                 StatusText.Text = "Encrypting...";
                 AppendOutput($"[Encrypt] {algo} -> {outFile}");
 
-                var (code, output) = await RunOpenSSLAsync(args);
+                int code;
+                string output;
+
+                if (salt)
+                {
+                    (code, output) = await RunOpenSSLAsync(algo, "-salt", "-in", file, "-out", outFile, "-k", pwd);
+                }
+                else
+                {
+                    (code, output) = await RunOpenSSLAsync(algo, "-in", file, "-out", outFile, "-k", pwd);
+                }
 
                 string status = code == 0 ? "OK" : "ERROR";
                 AppendOutput(output.Length == 0 ? $"ExitCode={code}" : output);
@@ -230,18 +255,12 @@ namespace OpenSSLGui
                 string algo = GetSelectedComboText(AlgoBox);
                 string outFile = file + ".dec";
                 string pwd = PasswordBox.Password;
-
-                string args = $"{algo} -d -in \"{file}\" -out \"{outFile}\" -k \"{pwd}\"";
-
                 StatusText.Text = "Decrypting...";
                 AppendOutput($"[Decrypt] {algo} -> {outFile}");
-
-                var (code, output) = await RunOpenSSLAsync(args);
-
+                var (code, output) = await RunOpenSSLAsync(algo, "-d", "-in", file, "-out", outFile, "-k", pwd);
                 string status = code == 0 ? "OK" : "ERROR";
                 AppendOutput(output.Length == 0 ? $"ExitCode={code}" : output);
                 StatusText.Text = status == "OK" ? "Ready" : "Error (see log below)";
-
                 logger.Append(new LogEntry
                 {
                     Operation = "Decrypt",
@@ -270,15 +289,11 @@ namespace OpenSSLGui
                     MessageBox.Show("File not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
-
                 string h = GetSelectedComboText(HashAlgoBox);
-                string args = $"dgst -{h} \"{file}\"";
-
                 StatusText.Text = "Hashing...";
                 AppendOutput($"[Hash] {h} -> {file}");
-
                 var sw = Stopwatch.StartNew();
-                var (code, output) = await RunOpenSSLAsync(args);
+                var (code, output) = await RunOpenSSLAsync("dgst", $"-{h}", file);
                 sw.Stop();
 
                 string timeInfo = $"Time: {sw.ElapsedMilliseconds} ms";
@@ -337,24 +352,16 @@ namespace OpenSSLGui
                     MessageBox.Show("Please check paths to files A and B.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
-
                 string h = GetSelectedComboText(HashAlgoBox);
-
-                string argsA = $"dgst -{h} \"{fileA}\"";
-                string argsB = $"dgst -{h} \"{fileB}\"";
-
                 StatusText.Text = "Comparing hashes...";
                 AppendOutput($"[HashCompare] {h}");
                 AppendOutput($"A: {fileA}");
                 AppendOutput($"B: {fileB}");
 
                 var sw = System.Diagnostics.Stopwatch.StartNew();
-
-                var (codeA, outA) = await RunOpenSSLAsync(argsA);
-                var (codeB, outB) = await RunOpenSSLAsync(argsB);
-
+                var (codeA, outA) = await RunOpenSSLAsync("dgst", $"-{h}", fileA);
+                var (codeB, outB) = await RunOpenSSLAsync("dgst", $"-{h}", fileB);
                 sw.Stop();
-
                 if (codeA != 0 || codeB != 0)
                 {
                     AppendOutput(outA);
@@ -396,6 +403,7 @@ namespace OpenSSLGui
                 StatusText.Text = "Error";
             }
         }
+
         private static string ExtractDigestFromOpenSslOutput(string output)
         {
             if (string.IsNullOrWhiteSpace(output)) return "";
@@ -423,13 +431,9 @@ namespace OpenSSLGui
                     MessageBox.Show("Specify a path to save the key.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
-
-                string args = $"genrsa -out \"{outFile}\" {bits}";
-
                 StatusText.Text = "Generating key...";
                 AppendOutput($"[KeyGen] RSA {bits} -> {outFile}");
-
-                var (code, output) = await RunOpenSSLAsync(args);
+                var (code, output) = await RunOpenSSLAsync("genrsa", "-out", outFile, bits);
                 string status = code == 0 ? "OK" : "ERROR";
 
                 AppendOutput(output.Length == 0 ? $"ExitCode={code}" : output);
@@ -498,6 +502,12 @@ namespace OpenSSLGui
 
             StatusText.Text = _isDarkTheme ? "Theme: Dark" : "Theme: Light";
             AppendOutput($"[Theme] {(_isDarkTheme ? "Dark" : "Light")}");
+        }
+
+        // ---------------- Settings -----------------
+
+        private void ResetSettings_Click(object sender, RoutedEventArgs e)
+        {
         }
     }
 }

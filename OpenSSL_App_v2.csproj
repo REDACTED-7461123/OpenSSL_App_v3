@@ -6,6 +6,14 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+	<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+	<!-- These two are separate from GenerateAssemblyInfo -->
+	<GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+	<GenerateTargetPlatformAttribute>false</GenerateTargetPlatformAttribute>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Temp\" />
+  </ItemGroup>
 
 </Project>
