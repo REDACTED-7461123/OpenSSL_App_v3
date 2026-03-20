@@ -1,0 +1,12 @@
+{
+  "id": "samplepack",
+  "name": "Sample Pack",
+
+  "themes": [
+    {
+      "id": "solarized",
+      "name": "Solarized Slate",
+      "resource": "SolarizedSlate.xaml"
+    }
+  ]
+}

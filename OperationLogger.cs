@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 
-namespace OpenSSLGui
+namespace OpenSSL_App_v3
 {
     public sealed class OperationLogger
     {

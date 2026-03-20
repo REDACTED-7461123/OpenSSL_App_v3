@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace OpenSSLGui
+namespace OpenSSL_App_v3
 {
     public sealed class LogEntry
     {
@@ -9,7 +9,7 @@ namespace OpenSSLGui
         public string InputPath { get; set; } = "";
         public string OutputPath { get; set; } = "";
         public string Algorithm { get; set; } = "";
-        public string Status { get; set; } = "";   // OK / ERROR
-        public string Message { get; set; } = "";  // stderr/stdout summary
+        public string Status { get; set; } = "";
+        public string Message { get; set; } = "";
     }
 }

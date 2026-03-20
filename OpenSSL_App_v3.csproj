@@ -16,4 +16,10 @@
     <Folder Include="Temp\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="Plugins\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
