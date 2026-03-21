@@ -24,15 +24,6 @@ namespace OpenSSL_App_v3
         private void LoadBuiltIns(string baseDirectory)
         {
             Themes.AddRange(BuiltInPluginData.CreateThemes(baseDirectory));
-            EncryptionAlgorithms.Add(new EncryptionAlgorithmOption(
-                BuiltInPluginData.DefaultEncryptionAlgorithmId,
-                "AES-256-CBC",
-                IsSymmetric: true,
-                SupportsSalt: true,
-                IsDangerous: false,
-                CommandName: "aes-256-cbc",
-                WarningMessage: string.Empty
-            ));
         }
 
         private void LoadExternalPlugins(string baseDirectory)

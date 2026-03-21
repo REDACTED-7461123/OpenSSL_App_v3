@@ -20,9 +20,7 @@
         <Border Grid.Column="0" Grid.Row="0" Grid.RowSpan="4" CornerRadius="10" BorderBrush="#333" BorderThickness="1" Padding="10">
             <Grid>
                 <Grid.RowDefinitions>
-                    <!-- Content takes up all available space -->
                     <RowDefinition Height="*"/>
-                    <!-- Button only takes what it needs -->
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
@@ -60,7 +58,7 @@
             <Grid>
 
                 <!-- Encryption panel -->
-                <Grid x:Name="PanelEncrypt"  Visibility="Collapsed">
+                <Grid x:Name="PanelEncrypt">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
@@ -247,7 +245,7 @@
                 </Grid>
 
                 <!-- Settings panel -->
-                <Grid x:Name="PanelSettings">
+                <Grid x:Name="PanelSettings"  Visibility="Collapsed">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
@@ -259,7 +257,7 @@
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
 
-
+ 
                             <!-- Security -->
                             <Border CornerRadius="10" BorderBrush="#333" BorderThickness="1" Padding="12" Background="{DynamicResource PanelBgBrush}" Margin="0 0 0 10">
                                 <Grid>
@@ -297,9 +295,9 @@
                                             <ColumnDefinition Width="220"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="Strength checker" VerticalAlignment="Center"/>
-                                        <ComboBox Grid.Column="1" x:Name="PasswordCheckerCombo" Height="28"/>
+                                        <ComboBox Grid.Column="1" x:Name="PasswordCheckerCombo" Height="28" SelectionChanged="PasswordCheckerCombo_SelectionChanged"/>
                                         <TextBlock Grid.Column="3" Text="Generator profile" VerticalAlignment="Center" HorizontalAlignment="Left"/>
-                                        <ComboBox Grid.Column="3" x:Name="PasswordGeneratorCombo" Height="28" Margin="0 22 0 0"/>
+                                        <ComboBox Grid.Column="3" x:Name="PasswordGeneratorCombo" Height="28" Margin="-1 0 0 0"/>
                                     </Grid>
 
                                     <TextBlock Grid.Row="5" Grid.ColumnSpan="3" x:Name="PluginSummaryText" Margin="0 10 0 0" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap"/>

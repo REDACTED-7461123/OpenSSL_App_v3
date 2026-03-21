@@ -47,6 +47,26 @@ namespace OpenSSL_App_v3
             ApplySelectedTheme();
             UpdatePasswordStrength();
             UpdateOpenSslSummary();
+
+            // Set up combo boxes 
+
+            List<string> EncAlgos = new List<string>
+            {
+                "aes-256-cbc",
+                "kuznechik-cbc"
+            };
+
+            List<string> HashAlgos = new List<string>
+            {
+                "sha256",
+                "md5"
+            };
+
+            AlgoBox.ItemsSource = EncAlgos;
+            AlgoBox.SelectedIndex = 0;
+
+            HashAlgoBox.ItemsSource = HashAlgos;
+            HashAlgoBox.SelectedIndex = 0;
         }
         private ThemeOption CurrentTheme => GetSelectedOption(
             ThemeCombo,
@@ -59,11 +79,7 @@ namespace OpenSSL_App_v3
             pluginCatalog.EncryptionAlgorithms,
             securitySettings.DefaultEncryptionAlgorithmId,
             BuiltInPluginData.DefaultEncryptionAlgorithmId);
-        private HashAlgorithmOption CurrentHashAlgorithm => GetSelectedOption(
-            HashAlgoBox,
-            pluginCatalog.HashAlgorithms,
-            securitySettings.DefaultHashAlgorithmId,
-            BuiltInPluginData.DefaultHashAlgorithmId);
+        
         private void ModeList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (PanelEncrypt == null || StatusText == null) return;
@@ -124,6 +140,7 @@ namespace OpenSSL_App_v3
             return items.First();
         }
 
+
         private async Task<(int exitCode, string output)> RunOpenSSLAsync(params string[] args)
         {
             var psi = new ProcessStartInfo
@@ -136,7 +153,7 @@ namespace OpenSSL_App_v3
             };
 
             foreach (string argument in args)
-                psi.ArgumentList.Add(argument);
+                psi.ArgumentList.Add(argument); // Uses ArgumentList.Add for security
 
             using var p = new Process { StartInfo = psi };
             p.Start();
@@ -159,7 +176,7 @@ namespace OpenSSL_App_v3
             return sb.ToString();
         }
 
-        private bool EnsureOpenSslAvailable()
+        private bool EnsureOpenSslAvailable() // Remove hardcoded hash
         {
             string provider = "openssl.exe";
             if (!File.Exists(provider))
@@ -350,24 +367,28 @@ namespace OpenSSL_App_v3
 
                 if (!EnsurePasswordOk()) return;
 
-                EncryptionAlgorithmOption algo = CurrentEncryptionAlgorithm;
-                bool salt = UseSalt.IsChecked == true && algo.SupportsSalt;
+                string algo = AlgoBox.SelectedItem.ToString();
 
-                if (algo.IsDangerous && !ConfirmDangerousOperation(algo.WarningMessage))
-                    return;
+                //EncryptionAlgorithmOption algo = CurrentEncryptionAlgorithm;
+                //bool salt = UseSalt.IsChecked == true && algo.SupportsSalt;
+                bool salt = true;
+
+                //if (algo.IsDangerous && !ConfirmDangerousOperation(algo.WarningMessage))
+                //    return;
 
                 string outFile = file + ".enc";
                 string pwd = PasswordBox.Password;
                 StatusText.Text = "Encrypting...";
-                AppendOutput($"[Encrypt] {algo.CommandName} via {provider} -> {outFile}");
+                AppendOutput($"[Encrypt] {algo} via {provider} -> {outFile}");
 
                 int code;
                 string output;
-
-                if (salt)
-                    (code, output) = await RunOpenSSLAsync(algo.CommandName, "-salt", "-in", file, "-out", outFile, "-k", pwd);
+                if (algo == "kuznechik-cbc")
+                    (code, output) = await RunOpenSSLAsync("enc", "-engine", "gost", "-grasshopper-cbc", "-e", "-salt", "-in", file, "-out", outFile, "-k", pwd);
+                else if (salt)
+                    (code, output) = await RunOpenSSLAsync("enc", $"-{algo}", "-salt", "-in", file, "-out", outFile, "-k", pwd);
                 else
-                    (code, output) = await RunOpenSSLAsync(algo.CommandName, "-in", file, "-out", outFile, "-k", pwd);
+                    (code, output) = await RunOpenSSLAsync("enc", $"-{algo}", "-in", file, "-out", outFile, "-k", pwd);
 
                 string status = code == 0 ? "OK" : "ERROR";
                 AppendOutput(output.Length == 0 ? $"ExitCode={code}" : output);
@@ -378,7 +399,7 @@ namespace OpenSSL_App_v3
                     Operation = "Encrypt",
                     InputPath = file,
                     OutputPath = outFile,
-                    Algorithm = algo.CommandName,
+                    Algorithm = algo,
                     Status = status,
                     Message = output.Length > 300 ? output.Substring(0, 300) : output
                 });
@@ -451,14 +472,22 @@ namespace OpenSSL_App_v3
                     return;
                 }
 
-                HashAlgorithmOption hash = CurrentHashAlgorithm;
-                if (hash.IsDangerous && !ConfirmDangerousOperation(hash.WarningMessage))
+                if (HashAlgoBox.SelectedItem == null)
+                {
+                    MessageBox.Show("Select a hash algorithm.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
+                }
+
+                string hash_name = HashAlgoBox.SelectedItem.ToString();
+
+                //HashAlgorithmOption hash = CurrentHashAlgorithm;
+                //if (hash.IsDangerous && !ConfirmDangerousOperation(hash.WarningMessage))
+                //    return;
 
                 StatusText.Text = "Hashing...";
-                AppendOutput($"[Hash] {hash.CommandName} -> {file}");
+                AppendOutput($"[Hash] {hash_name} -> {file}");
                 var sw = Stopwatch.StartNew();
-                var (code, output) = await RunOpenSSLAsync("dgst", $"-{hash.CommandName}", file);
+                var (code, output) = await RunOpenSSLAsync("dgst", $"-{hash_name}", file);
                 sw.Stop();
 
                 string timeInfo = $"Time: {sw.ElapsedMilliseconds} ms";
@@ -474,7 +503,7 @@ namespace OpenSSL_App_v3
                     Operation = "Hash",
                     InputPath = file,
                     OutputPath = "",
-                    Algorithm = hash.CommandName,
+                    Algorithm = hash_name,
                     Status = status,
                     Message = output.Length > 300 ? output.Substring(0, 300) : output
                 });
@@ -496,7 +525,7 @@ namespace OpenSSL_App_v3
             CompareResultText.Text = "";
         }
 
-        private async void CompareHash_Click(object sender, RoutedEventArgs e)
+        private async void CompareHash_Click(object sender, RoutedEventArgs e)  // Function that compares the hashes of two files 
         {
             try
             {
@@ -509,18 +538,25 @@ namespace OpenSSL_App_v3
                     return;
                 }
 
-                HashAlgorithmOption hash = CurrentHashAlgorithm;
-                if (hash.IsDangerous && !ConfirmDangerousOperation(hash.WarningMessage))
+                if (HashAlgoBox.SelectedItem == null)
+                {
+                    MessageBox.Show("Select a hash algorithm.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
+                }
+
+                string hash_name = HashAlgoBox.SelectedItem.ToString();
+
+                //if (hash.IsDangerous && !ConfirmDangerousOperation(hash.WarningMessage))
+                //    return;
 
                 StatusText.Text = "Comparing hashes...";
-                AppendOutput($"[HashCompare] {hash.CommandName}");
+                AppendOutput($"[HashCompare] {hash_name}");
                 AppendOutput($"A: {fileA}");
                 AppendOutput($"B: {fileB}");
 
                 var sw = Stopwatch.StartNew();
-                var (codeA, outA) = await RunOpenSSLAsync("dgst", $"-{hash.CommandName}", fileA);
-                var (codeB, outB) = await RunOpenSSLAsync("dgst", $"-{hash.CommandName}", fileB);
+                var (codeA, outA) = await RunOpenSSLAsync("dgst", $"-{hash_name}", fileA);
+                var (codeB, outB) = await RunOpenSSLAsync("dgst", $"-{hash_name}", fileB);
                 sw.Stop();
 
                 if (codeA != 0 || codeB != 0)
@@ -550,7 +586,7 @@ namespace OpenSSL_App_v3
                     Operation = "HashCompare",
                     InputPath = fileA,
                     OutputPath = fileB,
-                    Algorithm = hash.CommandName,
+                    Algorithm = hash_name,
                     Status = "OK",
                     Message = $"{(equal ? "MATCH" : "DIFFERENT")} | {timeInfo}"
                 });
@@ -739,6 +775,11 @@ namespace OpenSSL_App_v3
         private void PersistSecuritySettings()
         {
             securitySettingsStore.Save(securitySettings);
+        }
+
+        private void PasswordCheckerCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
         }
     }
 }

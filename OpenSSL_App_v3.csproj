@@ -22,4 +22,12 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="Assets\settings.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\settings.png" />
+  </ItemGroup>
+
 </Project>
