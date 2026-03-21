@@ -18,6 +18,8 @@ namespace OpenSSL_App_v3
         string provider = "openssl.exe";
         const string expectedhash = "hash";
 
+        private readonly string ProviderHash = "3412f2c4a3d0367bf6212c965df30658758575aebe8e74d12e2d9382e5a00170";
+
         public MainWindow()
         {
             InitializeComponent();
@@ -165,6 +167,16 @@ namespace OpenSSL_App_v3
             return (p.ExitCode, (stdout + stderr).Trim());
         }
 
+
+        //                                                                               //
+        //                                                                               //
+        //                                                                               //
+        // ================================== HELPERS ================================== //
+        //                                                                               //
+        //                                                                               //
+        //                                                                               //
+
+
         private static string ComputeSha256OfFile(string filePath)
         {
             using FileStream stream = File.OpenRead(filePath);
@@ -185,12 +197,12 @@ namespace OpenSSL_App_v3
                 return false;
             }
 
-            if (!string.IsNullOrWhiteSpace("3412f2c4a3d0367bf6212c965df30658758575aebe8e74d12e2d9382e5a00170"))
+            if (!string.IsNullOrWhiteSpace(ProviderHash))
             {
                 string actualSha256 = ComputeSha256OfFile(provider);
-                if (!string.Equals(actualSha256, "3412f2c4a3d0367bf6212c965df30658758575aebe8e74d12e2d9382e5a00170", StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(actualSha256, ProviderHash, StringComparison.OrdinalIgnoreCase))
                 {
-                    MessageBox.Show($"OpenSSL provider hash is incorrect.\n\nExpected:\n{"3412f2c4a3d0367bf6212c965df30658758575aebe8e74d12e2d9382e5a00170"}\n\nActual:\n{actualSha256}", "Integrity check failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"OpenSSL provider hash is incorrect.\n\nExpected:\n{ProviderHash}\n\nActual:\n{actualSha256}", "Integrity check failed", MessageBoxButton.OK, MessageBoxImage.Error);
                     return false;
                 }
             }
@@ -353,6 +365,14 @@ namespace OpenSSL_App_v3
             string cmd = $"\"{provider}\" genrsa -out \"{outFile}\" {bits}";
             MessageBox.Show(cmd, "OpenSSL Command", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+
+        //                                                                                 //
+        //                                                                                 //
+        //                                                                                 //
+        // ================================== MAIN PART ================================== //
+        //                                                                                 //
+        //                                                                                 //
+        //                                                                                 //
 
         private async void Encrypt_Click(object sender, RoutedEventArgs e)
         {
@@ -525,7 +545,7 @@ namespace OpenSSL_App_v3
             CompareResultText.Text = "";
         }
 
-        private async void CompareHash_Click(object sender, RoutedEventArgs e)  // Function that compares the hashes of two files 
+        private async void CompareHash_Click(object sender, RoutedEventArgs e)  // Remove stopwatch, it's not needed
         {
             try
             {
@@ -680,6 +700,14 @@ namespace OpenSSL_App_v3
             }
         }
 
+        //                                                                               //
+        //                                                                               //
+        //                                                                               //
+        // ================================== SETTINGS ================================= //
+        //                                                                               //
+        //                                                                               //
+        //                                                                               //
+
         private void ResetSettings_Click(object sender, RoutedEventArgs e)
         {
             securitySettings = SecuritySettings.Default();
@@ -708,6 +736,7 @@ namespace OpenSSL_App_v3
             PasswordGeneratorCombo.SelectionChanged += PluginSelectionChanged;
             DefaultEncAlgoBox.SelectionChanged += PluginSelectionChanged;
             DefaultHashAlgoBox.SelectionChanged += PluginSelectionChanged;
+
             AlgoBox.SelectionChanged += RuntimeAlgorithmSelectionChanged;
             HashAlgoBox.SelectionChanged += RuntimeAlgorithmSelectionChanged;
         }
@@ -775,11 +804,6 @@ namespace OpenSSL_App_v3
         private void PersistSecuritySettings()
         {
             securitySettingsStore.Save(securitySettings);
-        }
-
-        private void PasswordCheckerCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-
         }
     }
 }
