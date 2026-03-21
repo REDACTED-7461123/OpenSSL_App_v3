@@ -805,5 +805,10 @@ namespace OpenSSL_App_v3
         {
             securitySettingsStore.Save(securitySettings);
         }
+
+        private void PasswordCheckerCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
+        }
     }
 }
