@@ -89,7 +89,11 @@
 
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="Password" FontWeight="SemiBold"/>
-                            <PasswordBox x:Name="PasswordBox" Height="28" PasswordChanged="PasswordBox_PasswordChanged"/>
+                            <PasswordBox x:Name="PasswordBox" Height="28" PasswordChanged="PasswordBox_PasswordChanged" PasswordChar="•"/>
+
+                            <TextBlock x:Name="ShowPassword" Text="SHOW" PreviewMouseDown="ShowPassword_PreviewMouseDown" PreviewMouseUp="ShowPassword_PreviewMouseUp" MouseLeave="ShowPassword_MouseLeave"/>
+
+                            <TextBox Name="PasswordUnmask" Visibility="Hidden"/>
                             <Button Content="Generate password" Width="160" Margin="0 6 0 0" Click="GeneratePassword_Click"/>
                             <CheckBox x:Name="AllowWeakPassword" Content="Allow weak password (not recommended)" Margin="0 6 0 0"/>
                         </StackPanel>

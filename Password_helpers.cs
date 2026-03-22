@@ -43,7 +43,7 @@ namespace OpenSSL_App_v3
         // Source - https://stackoverflow.com/a/54997
 
         public static string Generate(int length) {
-            const string valid = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+            const string valid = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_+=-<>?";
             StringBuilder res = new StringBuilder();
             Random rnd = new Random();
             while (0 < length--) {

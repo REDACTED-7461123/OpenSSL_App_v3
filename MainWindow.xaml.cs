@@ -5,6 +5,7 @@ using System.Security.Cryptography; // SHA256
 using System.Text;  // StringBuilder
 using System.Windows; // Window, MessageBox
 using System.Windows.Controls; // ComboBox, TextBox, ...
+using System.Windows.Input; // MouseEventArgs
 
 namespace OpenSSL_App_v3
 {
@@ -16,8 +17,6 @@ namespace OpenSSL_App_v3
         private SecuritySettings securitySettings = SecuritySettings.Default();
 
         string provider = "openssl.exe";
-        const string expectedhash = "hash";
-
         private readonly string ProviderHash = "3412f2c4a3d0367bf6212c965df30658758575aebe8e74d12e2d9382e5a00170";
 
         public MainWindow()
@@ -48,19 +47,21 @@ namespace OpenSSL_App_v3
 
             ApplySelectedTheme();
             UpdatePasswordStrength();
-            UpdateOpenSslSummary();
 
             // Set up combo boxes 
 
             List<string> EncAlgos = new List<string>
             {
                 "aes-256-cbc",
-                "kuznechik-cbc"
+                "kuznechik-cbc",
+                "chacha20"
             };
 
             List<string> HashAlgos = new List<string>
             {
                 "sha256",
+                "sha384",
+                "sha512",
                 "md5"
             };
 
@@ -210,12 +211,27 @@ namespace OpenSSL_App_v3
             return true;
         }
 
-        private void UpdateOpenSslSummary()
+        // Source - https://stackoverflow.com/a/56135473
+        // Posted by Marco Concas
+        // Retrieved 2026-03-22, License - CC BY-SA 4.0
+
+        private void ShowPassword_PreviewMouseDown(object sender, MouseButtonEventArgs e) => ShowPasswordFunction();
+        private void ShowPassword_PreviewMouseUp(object sender, MouseButtonEventArgs e) => HidePasswordFunction();
+        private void ShowPassword_MouseLeave(object sender, MouseEventArgs e) => HidePasswordFunction();
+
+        private void ShowPasswordFunction()
         {
-            string provider = "openssl.exe";
-            if (OpenSslPathBox == null) return;
-            OpenSslPathBox.Text = provider;
-            OpenSslProviderInfo.Text = string.IsNullOrWhiteSpace(expectedhash) ? "Hash pin: not configured by plugin" : "Hash pin: configured";
+            ShowPassword.Text = "HIDE";
+            PasswordUnmask.Visibility = Visibility.Visible;
+            PasswordBox.Visibility = Visibility.Hidden;
+            PasswordUnmask.Text = PasswordBox.Password;
+        }
+
+        private void HidePasswordFunction()
+        {
+            ShowPassword.Text = "SHOW";
+            PasswordUnmask.Visibility = Visibility.Hidden;
+            PasswordBox.Visibility = Visibility.Visible;
         }
 
 
@@ -374,6 +390,8 @@ namespace OpenSSL_App_v3
         //                                                                                 //
         //                                                                                 //
 
+
+        //////////////////// Encryption //////////////////////
         private async void Encrypt_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -445,18 +463,29 @@ namespace OpenSSL_App_v3
                     return;
                 }
 
+                string algo = AlgoBox.SelectedItem.ToString();
+
                 if (!EnsurePasswordOk()) return;
 
-                EncryptionAlgorithmOption algo = CurrentEncryptionAlgorithm;
                 string outFile = file + ".dec";
                 string pwd = PasswordBox.Password;
 
-                if (algo.IsDangerous && !ConfirmDangerousOperation(algo.WarningMessage))
-                    return;
+                int code;
+                string output;
+
+                if (algo == "kuznechik-cbc")
+                    (code, output) = await RunOpenSSLAsync("enc", "-d", "-engine", "gost", "-grasshopper-cbc", "-in", file, "-out", outFile, "-k", pwd);
+                else
+                    (code, output) = await RunOpenSSLAsync(algo, "-d", "-in", file, "-out", outFile, "-k", pwd);
+
+
+
+                //if (algo.IsDangerous && !ConfirmDangerousOperation(algo.WarningMessage))
+                //    return;
+
 
                 StatusText.Text = "Decrypting...";
-                AppendOutput($"[Decrypt] {algo.CommandName} via {provider} -> {outFile}");
-                var (code, output) = await RunOpenSSLAsync(algo.CommandName, "-d", "-in", file, "-out", outFile, "-k", pwd);
+                AppendOutput($"[Decrypt] {algo} via {provider} -> {outFile}");
                 string status = code == 0 ? "OK" : "ERROR";
                 AppendOutput(output.Length == 0 ? $"ExitCode={code}" : output);
                 StatusText.Text = status == "OK" ? "Ready" : "Error (see log below)";
@@ -466,7 +495,7 @@ namespace OpenSSL_App_v3
                     Operation = "Decrypt",
                     InputPath = file,
                     OutputPath = outFile,
-                    Algorithm = algo.CommandName,
+                    Algorithm = algo,
                     Status = status,
                     Message = output.Length > 300 ? output.Substring(0, 300) : output
                 });
@@ -481,6 +510,7 @@ namespace OpenSSL_App_v3
             }
         }
 
+        //////////////////// Hashes //////////////////////
         private async void Hash_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -629,6 +659,8 @@ namespace OpenSSL_App_v3
             return "";
         }
 
+        
+        //////////////////// RSA //////////////////////
         private async void GenRsa_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -669,6 +701,8 @@ namespace OpenSSL_App_v3
             }
         }
 
+
+        ////////////////////  //////////////////////
         private string GetSelectedRsaBits()
         {
             if (RsaBitsBox.SelectedItem is ComboBoxItem item && item.Content != null)
@@ -716,7 +750,6 @@ namespace OpenSSL_App_v3
             PersistSecuritySettings();
             ApplySelectedTheme();
             UpdatePasswordStrength();
-            UpdateOpenSslSummary();
             StatusText.Text = "Settings reset";
             AppendOutput("[Settings] Reset to defaults.");
         }
@@ -731,9 +764,7 @@ namespace OpenSSL_App_v3
             ConfirmDangerousOpsCheck.Unchecked += SecuritySettingChanged;
 
             ThemeCombo.SelectionChanged += PluginSelectionChanged;
-            OpenSslProviderCombo.SelectionChanged += PluginSelectionChanged;
             PasswordCheckerCombo.SelectionChanged += PluginSelectionChanged;
-            PasswordGeneratorCombo.SelectionChanged += PluginSelectionChanged;
             DefaultEncAlgoBox.SelectionChanged += PluginSelectionChanged;
             DefaultHashAlgoBox.SelectionChanged += PluginSelectionChanged;
 
@@ -760,7 +791,6 @@ namespace OpenSSL_App_v3
             PersistSecuritySettings();
             ApplySelectedTheme();
             UpdatePasswordStrength();
-            UpdateOpenSslSummary();
         }
 
         private void SecuritySettingChanged(object sender, RoutedEventArgs e)
