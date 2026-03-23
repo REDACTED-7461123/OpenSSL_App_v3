@@ -407,7 +407,6 @@ namespace OpenSSL_App_v3
 
                 //EncryptionAlgorithmOption algo = CurrentEncryptionAlgorithm;
                 //bool salt = UseSalt.IsChecked == true && algo.SupportsSalt;
-                bool salt = true;
 
                 //if (algo.IsDangerous && !ConfirmDangerousOperation(algo.WarningMessage))
                 //    return;
@@ -420,11 +419,9 @@ namespace OpenSSL_App_v3
                 int code;
                 string output;
                 if (algo == "kuznechik-cbc")
-                    (code, output) = await RunOpenSSLAsync("enc", "-engine", "gost", "-grasshopper-cbc", "-e", "-salt", "-in", file, "-out", outFile, "-k", pwd);
-                else if (salt)
-                    (code, output) = await RunOpenSSLAsync("enc", $"-{algo}", "-salt", "-in", file, "-out", outFile, "-k", pwd);
+                    (code, output) = await RunOpenSSLAsync("enc", "-engine", "gost", "-grasshopper-cbc", "-e", "-salt", "-in", file, "-out", outFile, "-k", pwd, "-pbkdf2", "-iter", "1000");
                 else
-                    (code, output) = await RunOpenSSLAsync("enc", $"-{algo}", "-in", file, "-out", outFile, "-k", pwd);
+                    (code, output) = await RunOpenSSLAsync("enc", $"-{algo}", "-in", file, "-out", outFile, "-k", pwd, "-pbkdf2", "-iter", "1000");
 
                 string status = code == 0 ? "OK" : "ERROR";
                 AppendOutput(output.Length == 0 ? $"ExitCode={code}" : output);
@@ -515,7 +512,7 @@ namespace OpenSSL_App_v3
                 string outFile = "symmetric_key.key";
                 string content = PasswordBox.Password;
                 File.WriteAllText(outFile, content);
-                AppendOutput($"[Saved key] -> {outFile}");
+                AppendOutput($"[Saved key] via {provider} -> {outFile}");
             }
             catch (Exception ex)
             {
@@ -680,17 +677,19 @@ namespace OpenSSL_App_v3
             try
             {
                 string bits = GetSelectedRsaBits();
-                string outFile = KeyOutPathBox.Text;
+                string privateFile = "key.pem";
+                string publicFile = "public_key.pem";
 
-                if (string.IsNullOrWhiteSpace(outFile))
+                if (string.IsNullOrWhiteSpace(privateFile))
                 {
                     MessageBox.Show("Specify a path to save the key.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
                 StatusText.Text = "Generating key...";
-                AppendOutput($"[KeyGen] RSA {bits} via {provider} -> {outFile}");
-                var (code, output) = await RunOpenSSLAsync("genrsa", "-out", outFile, bits);
+                AppendOutput($"[KeyGen] RSA {bits} via {provider} -> {privateFile}");
+                var (code, output) = await RunOpenSSLAsync("genrsa", "-out", privateFile, bits);
+                (code, output) = await RunOpenSSLAsync("rsa", "-pubout", "-in", privateFile, "-out", publicFile);
                 string status = code == 0 ? "OK" : "ERROR";
 
                 AppendOutput(output.Length == 0 ? $"ExitCode={code}" : output);
@@ -700,13 +699,13 @@ namespace OpenSSL_App_v3
                 {
                     Operation = "KeyGen",
                     InputPath = "",
-                    OutputPath = outFile,
+                    OutputPath = privateFile,
                     Algorithm = $"RSA-{bits}",
                     Status = status,
                     Message = output.Length > 300 ? output.Substring(0, 300) : output
                 });
 
-                TryCopyToClipboard(outFile, "Key path");
+                TryCopyToClipboard(privateFile, "Key path");
             }
             catch (Exception ex)
             {
@@ -714,9 +713,7 @@ namespace OpenSSL_App_v3
                 StatusText.Text = "Error";
             }
         }
-
-
-        //////////////////// History //////////////////////
+        
         private string GetSelectedRsaBits()
         {
             if (RsaBitsBox.SelectedItem is ComboBoxItem item && item.Content != null)
@@ -725,6 +722,7 @@ namespace OpenSSL_App_v3
             return "2048";
         }
 
+        //////////////////// History //////////////////////
         private void ClearHistory_Click(object sender, RoutedEventArgs e)
         {
             if (MessageBox.Show("Are you sure you want to clear history?", "History", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)

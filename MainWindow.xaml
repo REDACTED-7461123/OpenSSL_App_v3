@@ -58,7 +58,7 @@
             <Grid>
 
                 <!-- Encryption panel -->
-                <Grid x:Name="PanelEncrypt">
+                <Grid x:Name="PanelEncrypt" Visibility="Collapsed">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
@@ -94,7 +94,7 @@
                             <TextBlock x:Name="ShowPassword" Text="SHOW" PreviewMouseDown="ShowPassword_PreviewMouseDown" PreviewMouseUp="ShowPassword_PreviewMouseUp" MouseLeave="ShowPassword_MouseLeave"/>
 
                             <TextBox Name="PasswordUnmask" Visibility="Hidden"/>
-                            <DockPanel Margin="0 6 0 0">
+                            <DockPanel>
                                 <Button Content="Generate password" Width="160" Margin="0 6 0 0" Click="GeneratePassword_Click"/>
                                 <Button Content="Save password" Width="160" Margin="0 6 0 0" Click="SavePassword_Click" />
                             </DockPanel>
@@ -192,7 +192,7 @@
                 </Grid>
 
                 <!-- RSA panel -->
-                <Grid x:Name="PanelKeys"  Visibility="Collapsed">
+                <Grid x:Name="PanelKeys">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
