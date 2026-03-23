@@ -15,7 +15,7 @@ namespace OpenSSL_App_v3
         public static PluginCatalog Load(string baseDirectory)
         {
             var catalog = new PluginCatalog();
-            catalog.LoadBuiltIns(baseDirectory);    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            catalog.LoadBuiltIns(baseDirectory);
             catalog.LoadExternalPlugins(baseDirectory);
             return catalog;
         }

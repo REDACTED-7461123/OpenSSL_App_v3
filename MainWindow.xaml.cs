@@ -1,6 +1,7 @@
 using Microsoft.Win32; // OpenFileDialog, SaveFileDialog
 using System.Diagnostics; // Stopwatch
 using System.IO;    // File, FileStream
+using System.Reflection.Metadata;
 using System.Security.Cryptography; // SHA256
 using System.Text;  // StringBuilder
 using System.Windows; // Window, MessageBox
@@ -507,6 +508,22 @@ namespace OpenSSL_App_v3
             }
         }
 
+        private async void SavePassword_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string outFile = "symmetric_key.key";
+                string content = PasswordBox.Password;
+                File.WriteAllText(outFile, content);
+                AppendOutput($"[Saved key] -> {outFile}");
+            }
+            catch (Exception ex)
+            {
+                AppendOutput("EXCEPTION: " + ex.Message);
+                StatusText.Text = "Error";
+            }
+        }
+
         //////////////////// Hashes //////////////////////
         private async void Hash_Click(object sender, RoutedEventArgs e)
         {
@@ -699,7 +716,7 @@ namespace OpenSSL_App_v3
         }
 
 
-        ////////////////////  //////////////////////
+        //////////////////// History //////////////////////
         private string GetSelectedRsaBits()
         {
             if (RsaBitsBox.SelectedItem is ComboBoxItem item && item.Content != null)
@@ -834,6 +851,11 @@ namespace OpenSSL_App_v3
         }
 
         private void PasswordCheckerCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
         {
 
         }
