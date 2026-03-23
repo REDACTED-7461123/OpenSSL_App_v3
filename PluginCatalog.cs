@@ -10,7 +10,6 @@ namespace OpenSSL_App_v3
     {
         public List<ThemeOption> Themes { get; } = new();
         public List<EncryptionAlgorithmOption> EncryptionAlgorithms { get; } = new();
-        public List<HashAlgorithmOption> HashAlgorithms { get; } = new();
         public List<string> LoadMessages { get; } = new();
 
         public static PluginCatalog Load(string baseDirectory)

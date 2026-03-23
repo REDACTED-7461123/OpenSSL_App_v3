@@ -19,6 +19,8 @@ namespace OpenSSL_App_v3
         string provider = "openssl.exe";
         private readonly string ProviderHash = "3412f2c4a3d0367bf6212c965df30658758575aebe8e74d12e2d9382e5a00170";
 
+
+        //////////////////// Constructor //////////////////////
         public MainWindow()
         {
             InitializeComponent();
@@ -76,12 +78,6 @@ namespace OpenSSL_App_v3
             pluginCatalog.Themes,
             securitySettings.PreferredThemeId,
             BuiltInPluginData.LightThemeId);
-
-        private EncryptionAlgorithmOption CurrentEncryptionAlgorithm => GetSelectedOption(
-            AlgoBox,
-            pluginCatalog.EncryptionAlgorithms,
-            securitySettings.DefaultEncryptionAlgorithmId,
-            BuiltInPluginData.DefaultEncryptionAlgorithmId);
         
         private void ModeList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -234,6 +230,7 @@ namespace OpenSSL_App_v3
             PasswordBox.Visibility = Visibility.Visible;
         }
 
+        /// Explain this shit 
 
         private void PopulatePluginDrivenUi()
         {
