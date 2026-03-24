@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace OpenSSL_App_v3
+﻿namespace OpenSSL_App_v3
 {
     public sealed class LogEntry
     {

@@ -469,9 +469,9 @@ namespace OpenSSL_App_v3
                 string output;
 
                 if (algo == "kuznechik-cbc")
-                    (code, output) = await RunOpenSSLAsync("enc", "-d", "-engine", "gost", "-grasshopper-cbc", "-in", file, "-out", outFile, "-k", pwd);
+                    (code, output) = await RunOpenSSLAsync("enc", "-d", "-engine", "gost", "-grasshopper-cbc", "-in", file, "-out", outFile, "-k", pwd, "-pbkdf2", "-iter", "1000");
                 else
-                    (code, output) = await RunOpenSSLAsync(algo, "-d", "-in", file, "-out", outFile, "-k", pwd);
+                    (code, output) = await RunOpenSSLAsync(algo, "-d", "-in", file, "-out", outFile, "-k", pwd, "-pbkdf2", "-iter", "1000");
 
 
 
@@ -713,7 +713,276 @@ namespace OpenSSL_App_v3
                 StatusText.Text = "Error";
             }
         }
-        
+
+        private void BrowseSymmetricKeyInput_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var dlg = new OpenFileDialog
+                {
+                    Title = "Select symmetric key file",
+                    Filter = "Key files (*.key;*.bin)|*.key;*.bin|All files (*.*)|*.*"
+                };
+
+                if (dlg.ShowDialog() == true)
+                    SymmetricKeyInputBox.Text = dlg.FileName;
+            }
+            catch (Exception ex)
+            {
+                AppendOutput("EXCEPTION: " + ex.Message);
+                StatusText.Text = "Error";
+            }
+        }
+
+        private void BrowseRsaKeyPath_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var dlg = new OpenFileDialog
+                {
+                    Title = "Select RSA public key file",
+                    Filter = "PEM files (*.pem)|*.pem|Key files (*.key)|*.key|All files (*.*)|*.*"
+                };
+
+                if (dlg.ShowDialog() == true)
+                    RsaKeyPathBox.Text = dlg.FileName;
+            }
+            catch (Exception ex)
+            {
+                AppendOutput("EXCEPTION: " + ex.Message);
+                StatusText.Text = "Error";
+            }
+        }
+
+        private void BrowseRsaWrappedOutput_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var dlg = new SaveFileDialog
+                {
+                    Title = "Select output file",
+                    FileName = "symmetric_key.enc",
+                    Filter = "Encrypted key files (*.enc)|*.enc|All files (*.*)|*.*"
+                };
+
+                if (dlg.ShowDialog() == true)
+                    RsaWrappedOutputBox.Text = dlg.FileName;
+            }
+            catch (Exception ex)
+            {
+                AppendOutput("EXCEPTION: " + ex.Message);
+                StatusText.Text = "Error";
+            }
+        }
+
+        private string BuildRsaWrapCommandPreview()
+        {
+            string inputFile = SymmetricKeyInputBox.Text.Trim();
+            string rsaKeyFile = RsaKeyPathBox.Text.Trim();
+            string outputFile = RsaWrappedOutputBox.Text.Trim();
+
+            return $"openssl pkeyutl -encrypt -pubin -inkey \"{rsaKeyFile}\" -in \"{inputFile}\" -out \"{outputFile}\" -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -pkeyopt rsa_mgf1_md:sha256";
+        }
+
+        private async void RunRsaWrap_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string inputFile = SymmetricKeyInputBox.Text.Trim();
+                string rsaKeyFile = RsaKeyPathBox.Text.Trim();
+                string outputFile = RsaWrappedOutputBox.Text.Trim();
+
+                // Alerts 
+                // ==================
+                if (string.IsNullOrWhiteSpace(inputFile))
+                {
+                    MessageBox.Show("Specify input symmetric key file.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(rsaKeyFile))
+                {
+                    MessageBox.Show("Specify RSA public key file.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(outputFile))
+                {
+                    MessageBox.Show("Specify output file.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (!File.Exists(inputFile))
+                {
+                    MessageBox.Show("Input symmetric key file does not exist.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (!File.Exists(rsaKeyFile))
+                {
+                    MessageBox.Show("RSA public key file does not exist.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                // ====================
+
+                StatusText.Text = "Encrypting symmetric key...";
+                AppendOutput($"[RsaProtectKey] {Path.GetFileName(inputFile)} using {Path.GetFileName(rsaKeyFile)} -> {outputFile}");
+
+                var (code, output) = await RunOpenSSLAsync(
+                    "pkeyutl",
+                    "-encrypt",
+                    "-pubin",
+                    "-inkey", rsaKeyFile,
+                    "-in", inputFile,
+                    "-out", outputFile,
+                    "-pkeyopt", "rsa_padding_mode:oaep",
+                    "-pkeyopt", "rsa_oaep_md:sha256",
+                    "-pkeyopt", "rsa_mgf1_md:sha256"
+                );
+
+                string status = code == 0 ? "OK" : "ERROR";
+
+                AppendOutput(string.IsNullOrWhiteSpace(output) ? $"ExitCode={code}" : output);
+                StatusText.Text = status == "OK" ? "Ready" : "Error (see log below)";
+
+                logger.Append(new LogEntry
+                {
+                    Operation = "RsaProtectKey",
+                    InputPath = inputFile,
+                    OutputPath = outputFile,
+                    Algorithm = "RSA-OAEP-SHA256 Encrypt",
+                    Status = status,
+                    Message = string.IsNullOrWhiteSpace(output)
+                        ? $"ExitCode={code}"
+                        : (output.Length > 300 ? output.Substring(0, 300) : output)
+                });
+
+                if (status == "OK")
+                    TryCopyToClipboard(outputFile, "Output path");
+            }
+            catch (Exception ex)
+            {
+                AppendOutput("EXCEPTION: " + ex.Message);
+                StatusText.Text = "Error";
+            }
+        }
+
+        private void BrowseRsaPrivateKey_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var dlg = new OpenFileDialog
+                {
+                    Title = "Select RSA private key file",
+                    Filter = "PEM files (*.pem)|*.pem|Key files (*.key)|*.key|All files (*.*)|*.*"
+                };
+
+                if (dlg.ShowDialog() == true)
+                    RsaPrivateKeyPathBox.Text = dlg.FileName;
+            }
+            catch (Exception ex)
+            {
+                AppendOutput("EXCEPTION: " + ex.Message);
+                StatusText.Text = "Error";
+            }
+        }
+
+        private async void RunRsaUnwrap_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string inputFile = SymmetricKeyInputBox.Text.Trim();
+                string rsaPrivateKeyFile = RsaPrivateKeyPathBox.Text.Trim();
+                string outputFile = RsaWrappedOutputBox.Text.Trim();
+
+                if (string.IsNullOrWhiteSpace(inputFile))
+                {
+                    MessageBox.Show("Specify encrypted symmetric key file.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(rsaPrivateKeyFile))
+                {
+                    MessageBox.Show("Specify RSA private key file.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(outputFile))
+                {
+                    MessageBox.Show("Specify output file.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (!File.Exists(inputFile))
+                {
+                    MessageBox.Show("Encrypted symmetric key file does not exist.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (!File.Exists(rsaPrivateKeyFile))
+                {
+                    MessageBox.Show("RSA private key file does not exist.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                StatusText.Text = "Decrypting symmetric key...";
+                AppendOutput($"[RsaUnprotectKey] {Path.GetFileName(inputFile)} using {Path.GetFileName(rsaPrivateKeyFile)} -> {outputFile}");
+
+                var (code, output) = await RunOpenSSLAsync(
+                    "pkeyutl",
+                    "-decrypt",
+                    "-inkey", rsaPrivateKeyFile,
+                    "-in", inputFile,
+                    "-out", outputFile,
+                    "-pkeyopt", "rsa_padding_mode:oaep",
+                    "-pkeyopt", "rsa_oaep_md:sha256",
+                    "-pkeyopt", "rsa_mgf1_md:sha256"
+                );
+
+                string status = code == 0 ? "OK" : "ERROR";
+
+                AppendOutput(string.IsNullOrWhiteSpace(output) ? $"ExitCode={code}" : output);
+                StatusText.Text = status == "OK" ? "Ready" : "Error (see log below)";
+
+                logger.Append(new LogEntry
+                {
+                    Operation = "RsaUnprotectKey",
+                    InputPath = inputFile,
+                    OutputPath = outputFile,
+                    Algorithm = "RSA-OAEP-SHA256 Decrypt",
+                    Status = status,
+                    Message = string.IsNullOrWhiteSpace(output)
+                        ? $"ExitCode={code}"
+                        : (output.Length > 300 ? output.Substring(0, 300) : output)
+                });
+
+                if (status == "OK")
+                    TryCopyToClipboard(outputFile, "Output path");
+            }
+            catch (Exception ex)
+            {
+                AppendOutput("EXCEPTION: " + ex.Message);
+                StatusText.Text = "Error";
+            }
+        }
+
+        private void ShowRsaWrapCommand_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string cmd = BuildRsaWrapCommandPreview();
+                AppendOutput("[Command Preview]");
+                AppendOutput(cmd);
+                TryCopyToClipboard(cmd, "OpenSSL command");
+                StatusText.Text = "Command copied";
+            }
+            catch (Exception ex)
+            {
+                AppendOutput("EXCEPTION: " + ex.Message);
+                StatusText.Text = "Error";
+            }
+        }
+
         private string GetSelectedRsaBits()
         {
             if (RsaBitsBox.SelectedItem is ComboBoxItem item && item.Content != null)

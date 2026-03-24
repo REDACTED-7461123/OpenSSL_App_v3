@@ -9,7 +9,6 @@ namespace OpenSSL_App_v3
     public class PluginCatalog
     {
         public List<ThemeOption> Themes { get; } = new();
-        public List<EncryptionAlgorithmOption> EncryptionAlgorithms { get; } = new();
         public List<string> LoadMessages { get; } = new();
 
         public static PluginCatalog Load(string baseDirectory)
@@ -91,15 +90,6 @@ namespace OpenSSL_App_v3
             yield return new ThemeOption(LightThemeId, "Light", "/Light.xaml", true);
             yield return new ThemeOption(DarkThemeId, "Dark", "/Dark.xaml", true);
         }
-    }
-
-    public record HashAlgorithmOption(string DisplayName, string CommandName, bool IsDangerous, string Id, string WarningMessage) 
-    {
-        public override string ToString() => DisplayName;
-    }
-    public record EncryptionAlgorithmOption(string Id, string DisplayName, bool IsSymmetric, bool SupportsSalt, bool IsDangerous, string CommandName, string WarningMessage)
-    {
-        public override string ToString() => DisplayName;
     }
 
     public record ThemeOption(string Id, string DisplayName, string ResourcePath, bool IsBuiltIn)

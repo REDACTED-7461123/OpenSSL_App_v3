@@ -58,7 +58,7 @@
             <Grid>
 
                 <!-- Encryption panel -->
-                <Grid x:Name="PanelEncrypt" Visibility="Collapsed">
+                <Grid x:Name="PanelEncrypt">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
@@ -192,7 +192,7 @@
                 </Grid>
 
                 <!-- RSA panel -->
-                <Grid x:Name="PanelKeys">
+                <Grid x:Name="PanelKeys" Visibility="Collapsed">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
@@ -213,7 +213,7 @@
 
                     <StackPanel Grid.Row="2" Margin="0 8 0 0">
                         <TextBlock Text="Key length (bits)" FontWeight="SemiBold"/>
-                        <ComboBox x:Name="RsaBitsBox" Height="28" SelectedIndex="0" Margin="0 6 0 0">
+                        <ComboBox x:Name="RsaBitsBox" Height="28" SelectedIndex="0" Margin="0 6 10 0">
                             <ComboBoxItem Content="2048"/>
                             <ComboBoxItem Content="3072"/>
                             <ComboBoxItem Content="4096"/>
@@ -229,11 +229,50 @@
 
                         <StackPanel Orientation="Horizontal" Margin="0 12 0 0">
                             <Button Content="Generate" Width="140" Margin="0 0 8 0" Click="GenRsa_Click"/>
-                            <Button Content="Show command" Width="160" Click="ShowKeyCommand_Click"/>
+                            <Button Content="Show command" Width="150" Click="ShowKeyCommand_Click" Margin="0 0 10 0"/>
                         </StackPanel>
                     </StackPanel>
 
-                    <TextBlock Grid.Row="4" Text="Operation result will appear in the log below." Foreground="#888" Margin="0 10 0 0"/>
+                    <TextBlock Grid.Row="4" Text="." Foreground="#888" Margin="0 10 0 0"/>
+
+                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="0 8 0 0">
+                        <TextBlock Text="Input key file" FontWeight="SemiBold"/>
+                        <DockPanel Margin="0 6 0 0">
+                            <TextBox x:Name="SymmetricKeyInputBox" Height="28" VerticalContentAlignment="Center" Text="symmetric_key.key"/>
+                            <Button Content="Choose" Width="90" Margin="8 0 0 0" Click="BrowseSymmetricKeyInput_Click"/>
+                        </DockPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2" Grid.Column="2"  Margin="0 10 0 0">
+                        <TextBlock Text="RSA public key file" FontWeight="SemiBold"/>
+                        <DockPanel Margin="0 6 0 0">
+                            <TextBox x:Name="RsaKeyPathBox" Height="28" VerticalContentAlignment="Center" Text="public.pem"/>
+                            <Button Content="Choose" Width="90" Margin="8 0 0 0" Click="BrowseRsaKeyPath_Click"/>
+                        </DockPanel>
+
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="4" Grid.Column="2" Margin="0 10 0 0">
+                        <TextBlock Text="RSA private key file" FontWeight="SemiBold"/>
+                        <DockPanel Margin="0 6 0 0">
+                            <TextBox x:Name="RsaPrivateKeyPathBox" Height="28" VerticalContentAlignment="Center" Text="private.pem"/>
+                            <Button Content="Choose" Width="90" Margin="8 0 0 0" Click="BrowseRsaPrivateKey_Click"/>
+                        </DockPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="3" Grid.Column="2" Margin="0 10 0 0">
+                        <TextBlock Text="Output file" FontWeight="SemiBold"/>
+                        <DockPanel Margin="0 6 0 0">
+                            <TextBox x:Name="RsaWrappedOutputBox" Height="28" VerticalContentAlignment="Center" Text="symmetric_key.enc"/>
+                            <Button Content="Choose" Width="90" Margin="8 0 0 0" Click="BrowseRsaWrappedOutput_Click"/>
+                        </DockPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="5" Grid.Column="2" Orientation="Horizontal" Margin="0 12 0 0">
+                        <Button Content="Encrypt" Width="140" Margin="0 0 8 0" Click="RunRsaWrap_Click"/>
+                        <Button Content="Decrypt" Width="140" Margin="0 0 8 0" Click="RunRsaUnwrap_Click"/>
+                    </StackPanel>
+
                 </Grid>
 
                 <!-- History panel -->
